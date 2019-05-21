@@ -27,15 +27,24 @@ class SampleApp(tk.Frame):
         file = filedialog.askopenfilename(title="Choose a file",
                                           filetypes=[('image files', '.png'), ('image files', '.jpg'), ])
         self.file_loader(file,window)
+        #predict_output_helper(file,window)
 
-    def predict_output(self,file):
+
+    def predict_output_helper(self,file):
         img = Image.open(file)
 
-        #save image
-        filepath=""
+        # save image
+        filepath = ""
         return filepath
+
+    def predict_output(self,file):
+        self.InputUploader()
+        filepath=self.predict_output_helper()
         #call file loader to plot the image
-    
+
+    def preprocessing_pipeline(self):
+        self.InputUploader()
+        filepath = self.predict_output_helper()
 
     def file_loader(self,file,window):
         print(file)
