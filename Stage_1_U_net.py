@@ -88,7 +88,10 @@ def unet(sz=(256, 256, 1)):
     model.compile(optimizer=adam, loss='binary_crossentropy', metrics=[dice_hard])
 
     return model
-
+def get_model():
+    model = unet()
+    model.load_weights('weights/unet1-100.97final.h5')
+    return model
 def main_predict(model, path):
     raw = Image.open(path)
     raw = np.array(raw.resize((256, 256))) / 255.
@@ -101,10 +104,3 @@ def main_predict(model, path):
     msk[msk < 0.5] = 0
     return msk
 
-def get_model():
-    model = unet()
-    model.load_weights('weights/unet1-100.97final.h5')
-    return model
-
-model = get_model()
-main_predict(model, 'C:/Users/Soumya/Desktop/EnlargedWithoutBorder_Dataset/enlarged_vol4a.png')
