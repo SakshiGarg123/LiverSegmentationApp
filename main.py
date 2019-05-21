@@ -28,6 +28,15 @@ class SampleApp(tk.Frame):
                                           filetypes=[('image files', '.png'), ('image files', '.jpg'), ])
         self.file_loader(file,window)
 
+    def predict_output(self,file):
+        img = Image.open(file)
+
+        #save image
+        filepath=""
+        return filepath
+        #call file loader to plot the image
+    
+
     def file_loader(self,file,window):
         print(file)
         img = ImageTk.PhotoImage(Image.open(file))
