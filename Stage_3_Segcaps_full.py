@@ -29,6 +29,10 @@ import random
 import cv2
 from random import shuffle
 
+from google.colab import drive
+
+drive.mount('/content/gdrive')
+
 
 def image_generator(files, batch_size=32, sz=(256, 256)):
     while True:
@@ -68,6 +72,37 @@ def image_generator(files, batch_size=32, sz=(256, 256)):
         batch_y = np.expand_dims(batch_y, 3)
 
         yield ([batch_x, batch_y], [batch_y, batch_y * batch_x])
+
+
+import glob
+
+batch_size = 1
+
+all_files = glob.glob('gdrive/My Drive/Cropped Dataset/*liver*')
+
+print(all_files)
+shuffle(all_files)
+
+split = int(0.70 * len(all_files))
+
+# split into training and testing
+train_files = all_files[0:split]
+test_files = all_files[split:]
+
+train_generator = image_generator(train_files, batch_size=batch_size)
+test_generator = image_generator(test_files, batch_size=batch_size)
+#
+
+x, y = next(train_generator)
+
+plt.axis('off')
+img = x[0][0].squeeze()
+img = np.stack((img,) * 3, axis=-1)
+msk = x[1][0].squeeze()
+msk = np.stack((msk,) * 3, axis=-1)
+
+plt.imshow(np.concatenate([img, msk, img * msk], axis=1))
+
 
 def dice_soft(y_true, y_pred, loss_type='sorensen', axis=[1, 2, 3], smooth=1e-5, from_logits=False):
     """Soft dice (Sørensen or Jaccard) coefficient for comparing the similarity
@@ -162,6 +197,130 @@ def dice_hard(y_true, y_pred, threshold=0.5, axis=[1, 2, 3], smooth=1e-5):
 
 def dice_loss(y_true, y_pred, from_logits=False):
     return 1 - dice_soft(y_true, y_pred)
+
+
+def specificity(y_true, y_pred):
+    yt0 = y_true[:, :, :, 0]
+    yp0 = K.cast(y_pred[:, :, :, 0] > 0.5, 'float32')
+    tn = tf.count_nonzero(tf.logical_and(tf.equal(yt0, 0), tf.equal(yp0, 0)))
+    fp = tf.count_nonzero(tf.logical_and(tf.equal(yt0, 0), tf.equal(yp0, 1)))
+    specificity = tf.cast((tn) / (tn + fp), 'float32')
+    return specificity
+
+
+def precision(y_true, y_pred):
+    yt0 = y_true[:, :, :, 0]
+    yp0 = K.cast(y_pred[:, :, :, 0] > 0.5, 'float32')
+    tn = tf.count_nonzero(tf.logical_and(tf.equal(yt0, 0), tf.equal(yp0, 0)))
+    fp = tf.count_nonzero(tf.logical_and(tf.equal(yt0, 0), tf.equal(yp0, 1)))
+    tp = tf.count_nonzero(tf.logical_and(tf.equal(yt0, 1), tf.equal(yp0, 1)))
+    fn = tf.count_nonzero(tf.logical_and(tf.equal(yt0, 1), tf.equal(yp0, 0)))
+    precision = tf.where(tf.equal(tp + fp, 0), 1., tf.cast(tp / (tp + fp), 'float32'))
+    recall = tf.where(tf.equal(tp + fn, 0), 1., tf.cast(tp / (tp + fn), 'float32'))
+    f1 = tf.cast(2 * precision * recall / (precision + recall), 'float32')
+    return precision
+
+
+def recall(y_true, y_pred):
+    yt0 = y_true[:, :, :, 0]
+    yp0 = K.cast(y_pred[:, :, :, 0] > 0.5, 'float32')
+    tn = tf.count_nonzero(tf.logical_and(tf.equal(yt0, 0), tf.equal(yp0, 0)))
+    fp = tf.count_nonzero(tf.logical_and(tf.equal(yt0, 0), tf.equal(yp0, 1)))
+    tp = tf.count_nonzero(tf.logical_and(tf.equal(yt0, 1), tf.equal(yp0, 1)))
+    fn = tf.count_nonzero(tf.logical_and(tf.equal(yt0, 1), tf.equal(yp0, 0)))
+    precision = tf.where(tf.equal(tp + fp, 0), 1., tf.cast(tp / (tp + fp), 'float32'))
+    recall = tf.where(tf.equal(tp + fn, 0), 1., tf.cast(tp / (tp + fn), 'float32'))
+    f1 = tf.cast(2 * precision * recall / (precision + recall), 'float32')
+    return recall
+
+
+def f1(y_true, y_pred):
+    yt0 = y_true[:, :, :, 0]
+    yp0 = K.cast(y_pred[:, :, :, 0] > 0.5, 'float32')
+    tn = tf.count_nonzero(tf.logical_and(tf.equal(yt0, 0), tf.equal(yp0, 0)))
+    fp = tf.count_nonzero(tf.logical_and(tf.equal(yt0, 0), tf.equal(yp0, 1)))
+    tp = tf.count_nonzero(tf.logical_and(tf.equal(yt0, 1), tf.equal(yp0, 1)))
+    fn = tf.count_nonzero(tf.logical_and(tf.equal(yt0, 1), tf.equal(yp0, 0)))
+    precision = tf.where(tf.equal(tp + fp, 0), 1., tf.cast(tp / (tp + fp), 'float32'))
+    recall = tf.where(tf.equal(tp + fn, 0), 1., tf.cast(tp / (tp + fn), 'float32'))
+    f1 = tf.cast(2 * precision * recall / (precision + recall), 'float32')
+    return f1
+
+
+def acc(y_true, y_pred):
+    yt0 = y_true[:, :, :, 0]
+    yp0 = K.cast(y_pred[:, :, :, 0] > 0.5, 'float32')
+    tn = tf.count_nonzero(tf.logical_and(tf.equal(yt0, 0), tf.equal(yp0, 0)))
+    fp = tf.count_nonzero(tf.logical_and(tf.equal(yt0, 0), tf.equal(yp0, 1)))
+    tp = tf.count_nonzero(tf.logical_and(tf.equal(yt0, 1), tf.equal(yp0, 1)))
+    fn = tf.count_nonzero(tf.logical_and(tf.equal(yt0, 1), tf.equal(yp0, 0)))
+    acc = tf.cast((tp + tn) / (tp + tn + fp + fn), 'float32')
+    return acc
+
+
+def voe(y_true, y_pred):
+    yt0 = y_true[:, :, :, 0]
+    yp0 = K.cast(y_pred[:, :, :, 0] > 0.5, 'float32')
+    inter = tf.count_nonzero(tf.logical_and(tf.equal(yt0, 1), tf.equal(yp0, 1)))
+    union = tf.count_nonzero(yt0) + tf.count_nonzero(yp0)
+    voe = tf.where(tf.equal(union, 0), 1., tf.cast(inter / union, 'float32'))
+    return 1 - voe
+
+
+def CapsNetBasic(input_shape, n_class=2):
+    x = layers.Input(shape=input_shape)
+
+    # Layer 1: Just a conventional Conv2D layer
+    conv1 = layers.Conv2D(filters=256, kernel_size=5, strides=1, padding='same', activation='relu', name='conv1')(x)
+
+    # Reshape layer to be 1 capsule x [filters] atoms
+    _, H, W, C = conv1.get_shape()
+    conv1_reshaped = layers.Reshape((H.value, W.value, 1, C.value))(conv1)
+
+    # Layer 1: Primary Capsule: Conv cap with routing 1
+    primary_caps = ConvCapsuleLayer(kernel_size=5, num_capsule=8, num_atoms=32, strides=1, padding='same',
+                                    routings=1, name='primarycaps')(conv1_reshaped)
+
+    # Layer 4: Convolutional Capsule: 1x1
+    seg_caps = ConvCapsuleLayer(kernel_size=1, num_capsule=1, num_atoms=16, strides=1, padding='same',
+                                routings=3, name='seg_caps')(primary_caps)
+
+    # Layer 4: This is an auxiliary layer to replace each capsule with its length. Just to match the true label's shape.
+    out_seg = Length(num_classes=n_class, seg=True, name='out_seg')(seg_caps)
+
+    # Decoder network.
+    _, H, W, C, A = seg_caps.get_shape()
+    y = layers.Input(shape=input_shape[:-1] + (1,))
+    masked_by_y = Mask()([seg_caps, y])  # The true label is used to mask the output of capsule layer. For training
+    masked = Mask()(seg_caps)  # Mask using the capsule with maximal length. For prediction
+
+    def shared_decoder(mask_layer):
+        recon_remove_dim = layers.Reshape((H.value, W.value, A.value))(mask_layer)
+
+        recon_1 = layers.Conv2D(filters=64, kernel_size=1, padding='same', kernel_initializer='he_normal',
+                                activation='relu', name='recon_1')(recon_remove_dim)
+
+        recon_2 = layers.Conv2D(filters=128, kernel_size=1, padding='same', kernel_initializer='he_normal',
+                                activation='relu', name='recon_2')(recon_1)
+
+        out_recon = layers.Conv2D(filters=1, kernel_size=1, padding='same', kernel_initializer='he_normal',
+                                  activation='sigmoid', name='out_recon')(recon_2)
+
+        return out_recon
+
+    # Models for training and evaluation (prediction)
+    train_model = models.Model(inputs=[x, y], outputs=[out_seg, shared_decoder(masked_by_y)])
+    eval_model = models.Model(inputs=x, outputs=[out_seg, shared_decoder(masked)])
+
+    # manipulate model
+    noise = layers.Input(shape=((H.value, W.value, C.value, A.value)))
+    noised_seg_caps = layers.Add()([seg_caps, noise])
+    masked_noised_y = Mask()([noised_seg_caps, y])
+    manipulate_model = models.Model(inputs=[x, y, noise], outputs=shared_decoder(masked_noised_y))
+    return train_model
+
+
+#     return train_model, eval_model, manipulate_model
 
 def CapsNetR3(input_shape, n_class=2):
     x = layers.Input(shape=input_shape)
@@ -611,10 +770,98 @@ def _squash(input_tensor):
 model = CapsNetR3((256, 256, 1))
 opt = Adam(lr=3e-5)
 model.compile(optimizer=opt, loss='binary_crossentropy', metrics={'out_seg': dice_hard})
+
 model.summary()
 model.load_weights('gdrive/My Drive/croppedtransferlesionsegcaps.h5')
 
 
+def build_callbacks():
+    checkpointer = ModelCheckpoint(filepath='gdrive/My Drive/croppedtransferlesionsegcaps.h5', verbose=0,
+                                   save_best_only=True, save_weights_only=True)
+    callbacks = [checkpointer, PlotLearning()]
+    return callbacks
+
+
+# inheritance for training process plot
+class PlotLearning(keras.callbacks.Callback):
+    def __init__(self):
+        self.best_loss = 1000
+
+    def on_train_begin(self, logs={}):
+        self.i = 0
+        self.x = []
+        self.losses = []
+        self.val_losses = []
+        self.acc = []
+        self.val_acc = []
+        # self.fig = plt.figure()
+        self.logs = []
+
+    def on_epoch_end(self, epoch, logs={}):
+        self.logs.append(logs)
+        self.x.append(self.i)
+        self.losses.append(logs.get('loss'))
+        self.val_losses.append(logs.get('val_loss'))
+        self.acc.append(logs.get('out_seg_dice_hard'))
+        self.val_acc.append(logs.get('val_out_seg_dice_hard'))
+        self.i += 1
+        print('i=', self.i, 'loss=', logs.get('loss'), 'val_loss=', logs.get('val_loss'),
+              'out_seg_dice_hard=', logs.get('out_seg_dice_hard'), 'val_out_seg_dice_hard=',
+              logs.get('val_out_seg_dice_hard'))
+
+        if (logs.get('loss') < self.best_loss):
+            self.best_loss = logs.get('loss')
+            model.save('gdrive/My Drive/croppedtransferlesionsegcapsbest.h5')
+
+        # choose a random test image and preprocess
+        path = np.random.choice(test_files)
+        raw = Image.open(f'{path}')
+        raw = np.array(raw.resize((256, 256))) / 255.
+        liver = Image.open(path.replace('vol', 'liver'))
+        liver = np.array(liver.resize((256, 256))) / 255.
+        raw = raw * liver
+
+        raw = np.expand_dims(raw, 2)
+
+        true_msk = Image.open(path.replace('vol', 'lesion'))
+        true_msk = np.array(true_msk.resize((256, 256))) / 255.
+        true_msk = np.expand_dims(true_msk, 2)
+        # predict the mask
+        pred = model.predict([np.expand_dims(raw, 0), np.expand_dims(true_msk, 0)])
+        raw = raw.squeeze()
+        raw = np.stack((raw,) * 3, axis=-1)
+        true_msk = true_msk.squeeze()
+        true_msk = np.stack((true_msk,) * 3, axis=-1)
+        # mask post-processing
+        msk = pred[0].squeeze()
+        msk = np.stack((msk,) * 3, axis=-1)
+        print(np.unique(msk))
+        print(raw.shape, true_msk.shape, msk.shape)
+        msk[msk >= 0.5] = 1
+        msk[msk < 0.5] = 0
+
+        # show the mask and the segmented image
+        combined = np.concatenate([raw, msk, raw * msk, true_msk, raw * true_msk], axis=1)
+        plt.axis('off')
+        plt.imshow(combined)
+        plt.show()
+
+
+train_steps = len(train_files) // batch_size
+test_steps = len(test_files) // batch_size
+model.fit_generator(train_generator,
+                    epochs=46, steps_per_epoch=train_steps, validation_data=test_generator, validation_steps=test_steps,
+                    callbacks=build_callbacks(), verbose=0)
+
+train_steps = len(train_files) // batch_size
+model.evaluate_generator(train_generator, steps=train_steps)
+
+test_steps = len(test_files) // batch_size
+model.evaluate_generator(test_generator, steps=test_steps)
+
+generator = image_generator(all_files, batch_size=batch_size)
+steps = len(all_files) // batch_size
+model.evaluate_generator(generator, steps=steps)
 
 path = 'gdrive/My Drive/Cropped Dataset/enlarged_liver4a.png'
 raw = Image.open(f'{path}')

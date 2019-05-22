@@ -10,6 +10,7 @@ from functools import partial
 import Stage_1_U_net as stage1
 import numpy as np
 class SampleApp(tk.Frame):
+    photolist=[]
     def __init__(self, parent):
         tk.Frame.__init__(self, parent)
         self.parent = parent
@@ -38,63 +39,38 @@ class SampleApp(tk.Frame):
         print(np.unique(arr))
         image = Image.fromarray(arr.astype('uint8'), 'RGB')
         image.save(filepath)
-        self.file_loader_predict_output(filepath)
         return filepath
 
     def clicked_chooseme(self,window):
         file = filedialog.askopenfilename(title="Choose a file",
                                           filetypes=[('image files', '.png'), ('image files', '.jpg'), ])
-        #self.file_loader(file,window)
+        self.file_loader(file,window,1,1)
         filepath=self.predict_output_helper(file,window)
         print("end",filepath)
+        self.file_loader(filepath, window, 1, 2)
 
     def predict_output(self):
-        self.InputUploader()
+        window = tk.Toplevel(root)
+        window.title("Input Uploader")
+        window.geometry("1000x1000")
+        self.InputUploader(window)
+        window.mainloop()
+
         #filepath=self.predict_output_helper()
         #call file loader to plot the image
 
-    def preprocessing_pipeline(self):
-        window = tk.Toplevel(root)
-        window.title("Intial Dataset")
-        filepath_axial=r"C:\Users\sakshigarg\Desktop\Liver_disease_demo\Dataset\Enlarged_Dataset\vol0a.png"
-        filepath_coronnal = r"C:\Users\sakshigarg\Desktop\Liver_disease_demo\Dataset\Enlarged_Dataset\vol0c.png"
-        filepath_sagittal = r"C:\Users\sakshigarg\Desktop\Liver_disease_demo\Dataset\Enlarged_Dataset\vol0s.png"
 
-        img_axial = ImageTk.PhotoImage(Image.open(filepath_axial))
-        img_coronnal = ImageTk.PhotoImage(Image.open(filepath_coronnal))
-        img_sagittal = ImageTk.PhotoImage(Image.open(filepath_sagittal))
-
-        canvas = Canvas(window, width=300, height=300)
-        canvas.grid(column=0, row=1)
-        canvas.create_image(20, 20, anchor=NW, image=img_axial)
-
-        canvas = Canvas(window, width=300, height=300)
-        canvas.grid(column=1, row=1)
-        canvas.create_image(20, 20, anchor=NW, image=img_coronnal)
-
-        canvas = Canvas(window, width=300, height=300)
-        canvas.grid(column=2, row=1)
-        canvas.create_image(20, 20, anchor=NW, image=img_sagittal)
-        window.mainloop()
-    def preprocessing_superimposition(self):
-        window = tk.Toplevel(root)
-        window.title("Masks Separation")
-
-
-    def file_loader_predict_output(self,file):
-        print(file)
-        window = tk.Toplevel(root)
-        window.title("Stage 1 OUPUT")
+    def file_loader(self,file,window,ip_column,ip_row):
+        print("inside file loader",file)
         img = ImageTk.PhotoImage(Image.open(file))
+        self.photolist.append(img)
         print(img)
-        canvas = Canvas(window, width=300, height=300)
-        canvas.grid(column=1, row=1)
+        canvas = Canvas(window, width=512, height=512)
+        canvas.grid(column=ip_column, row=ip_row)
         canvas.create_image(20, 20, anchor=NW, image=img)
-        window.mainloop()
 
-    def InputUploader(self):
-        window = tk.Toplevel(root)
-        window.title("Input Uploader")
+
+    def InputUploader(self,window):
         chooseme_with_arg = partial(self.clicked_chooseme, window)
         btn = Button(window, text="Choose Files", command=chooseme_with_arg)
         btn.grid(column=1, row=0)
@@ -108,6 +84,30 @@ class SampleApp(tk.Frame):
             self.predict_output()
         else:
             self.label.config(text="Password is incorrect")
+
+    # def preprocessing_pipeline(self):
+    #     window = tk.Toplevel(root)
+    #     window.title("Intial Dataset")
+    #     filepath_axial=r"C:\Users\sakshigarg\Desktop\Liver_disease_demo\Dataset\Enlarged_Dataset\vol0a.png"
+    #     filepath_coronnal = r"C:\Users\sakshigarg\Desktop\Liver_disease_demo\Dataset\Enlarged_Dataset\vol0c.png"
+    #     filepath_sagittal = r"C:\Users\sakshigarg\Desktop\Liver_disease_demo\Dataset\Enlarged_Dataset\vol0s.png"
+    #
+    #     img_axial = ImageTk.PhotoImage(Image.open(filepath_axial))
+    #     img_coronnal = ImageTk.PhotoImage(Image.open(filepath_coronnal))
+    #     img_sagittal = ImageTk.PhotoImage(Image.open(filepath_sagittal))
+    #
+    #     canvas = Canvas(window, width=300, height=300)
+    #     canvas.grid(column=0, row=1)
+    #     canvas.create_image(20, 20, anchor=NW, image=img_axial)
+    #
+    #     canvas = Canvas(window, width=300, height=300)
+    #     canvas.grid(column=1, row=1)
+    #     canvas.create_image(20, 20, anchor=NW, image=img_coronnal)
+    #
+    #     canvas = Canvas(window, width=300, height=300)
+    #     canvas.grid(column=2, row=1)
+    #     canvas.create_image(20, 20, anchor=NW, image=img_sagittal)
+    #     window.mainloop()
 
 if __name__ == "__main__":
     root = tk.Tk()
