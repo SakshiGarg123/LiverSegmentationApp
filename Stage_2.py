@@ -8,13 +8,13 @@ from keras.layers import Input
 from keras.callbacks import ModelCheckpoint
 import numpy as np
 import random
-import cv2
+#import cv2
 import logging
 import matplotlib.pyplot as plt
 from keras.optimizers import Adam, SGD
 from random import shuffle
 from PIL import Image
-from sklearn.model_selection import train_test_split
+#from sklearn.model_selection import train_test_split
 from keras import applications
 
 def get_model():
@@ -44,11 +44,11 @@ def get_model():
 def main_predict(model, path):
     raw = Image.open(path)
     raw = np.array(raw.resize((256, 256))) / 255.
-    raw = np.stack((raw,) * 3, axis=-1)
+    #raw = np.stack((raw,) * 3, axis=-1)
     # predict the mask
     pred = model.predict(np.expand_dims(raw, 0))
     print(pred[0][0])
     return pred[0][0]
 
-model = get_model()
-main_predict(model, 'C:/Users/Soumya/Desktop/Cropped Dataset/Cropped Dataset/enlarged_liver4a.png')
+# model = get_model()
+# main_predict(model, 'C:/Users/Soumya/Desktop/Cropped Dataset/Cropped Dataset/enlarged_liver4a.png')
