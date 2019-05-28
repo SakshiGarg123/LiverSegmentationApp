@@ -68,7 +68,7 @@ class SampleApp(tk.Frame):
     def predict_output(self):
         window = tk.Toplevel(root)
         window.title("Input Uploader")
-        window.geometry("1000x1200")
+        window.geometry("700x300")
         self.InputUploader(window)
         window.mainloop()
 
@@ -83,38 +83,50 @@ class SampleApp(tk.Frame):
         img = ImageTk.PhotoImage(raw)
         self.photolist.append(img)
         print(img)
-        canvas = Canvas(window, width=256, height=256)
+        canvas = Canvas(window, width=128, height=128)
         canvas.grid(column=ip_column, row=ip_row)
         canvas.create_image(20, 20, anchor=NW, image=img)
+
     def label_output(self,window):
         label_in = Label(window, text="Input Image", relief=RAISED)
-        label_in.grid(column=1, row=2)
+        label_in.grid(column=1, row=4)
         label_in = Label(window, text="Segmented Liver", relief=RAISED)
-        label_in.grid(column=2, row=2)
+        label_in.grid(column=2, row=4)
         label_in = Label(window, text="Cropped Image", relief=RAISED)
-        label_in.grid(column=3, row=2)
+        label_in.grid(column=3, row=4)
         label_in = Label(window, text="Segmented Lesion", relief=RAISED)
-        label_in.grid(column=4, row=2)
+        label_in.grid(column=4, row=4)
+
+    def label_output_lesion_absent(self, window):
+        label_in = Label(window, text="Input Image", relief=RAISED)
+        label_in.grid(column=1, row=4)
+        label_in = Label(window, text="Segmented Liver", relief=RAISED)
+        label_in.grid(column=2, row=4)
+        label_in = Label(window, text="Lesion is absent", relief=RAISED)
+        label_in.grid(column=3, row=3)
+        # label_in = Label(window, text="Segmented Lesion", relief=RAISED)
+        # label_in.grid(column=4, row=4)
 
 
     def clicked_chooseme(self, window):
         file = filedialog.askopenfilename(title="Choose a file",
                                           filetypes=[('image files', '.png'), ('image files', '.jpg'), ])
-        self.file_loader(file, window, 1, 1)
+        self.file_loader(file, window, 1, 3)
         filepath_stage1 = self.predict_output_helper_stage1(file, window)
         print("end", filepath_stage1)
-        self.file_loader(filepath_stage1, window, 2, 1)
+        self.file_loader(filepath_stage1, window, 2, 3)
         outputfile = r"C:\Users\sakshigarg\Desktop\Liver_disease_demo\a_output\outputaftercropping.png"
         crop.crop_file(filepath_stage1,file,outputfile)
-        self.file_loader(outputfile, window, 3, 1)
+
         x=self.predict_output_helper_stage2(outputfile,window)
         print("x = ",x)
         if x==0:
             print("Lesion is absent")
-            self.label_output(window)
+            self.label_output_lesion_absent(window)
         else:
+            self.file_loader(outputfile, window, 3, 3)
             stage3output=self.predict_output_helper_stage3(outputfile,window,truemaskfile=file)
-            self.file_loader(stage3output, window, 4, 1)
+            self.file_loader(stage3output, window, 4, 3)
             self.label_output(window)
 
     def InputUploader(self,window):
